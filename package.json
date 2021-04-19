@@ -1,0 +1,15 @@
+{
+  "name": "@chris.troutner/ipfs-wss-peers",
+  "version": "1.0.0",
+  "description": "",
+  "main": "scan-for-wss.js",
+  "scripts": {
+    "test": "echo no tests yet",
+    "start": "node scan-for-wss.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "ipfs": "^0.54.4"
+  }
+}
