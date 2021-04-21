@@ -29,7 +29,7 @@ class JsonFiles {
         _this.fs.writeFile(fileName, fileStr, function (err) {
           if (err) {
             console.error('Error while trying to write file: ')
-            throw err
+            return reject(err)
           } else {
             // console.log(`${fileName} written successfully!`)
             return resolve()
@@ -57,7 +57,7 @@ class JsonFiles {
               console.log(`err: ${JSON.stringify(err, null, 2)}`)
             }
 
-            throw err
+            return reject(err)
           }
 
           const obj = JSON.parse(data)

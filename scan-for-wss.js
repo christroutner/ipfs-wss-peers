@@ -33,6 +33,7 @@ const bootstrapMultiaddrs = [
 
 let knownValidAddrs = [];
 let knownInvalidAddrs = [];
+const wsData = [];
 
 async function startScan() {
   try {
@@ -112,23 +113,20 @@ async function startScan() {
       const connectedPeers = peers.map((elem) => elem.peer);
       // console.log('connectedPeers: ', connectedPeers)
 
-      // Loop through a max of 25 peers. Missed peers will naturally get
-      // interrogated in later iterations of the loop.
-      // let loopLimit = connectedPeers.length;
-      // if (loopLimit > 25) loopLimit = 25;
-
       // Randomly select 25 peers.
-      let subsample = connectedPeers.concat([])
-      if(subsample.length > 25) {
-        subsample = getSubsamples(subsample)
-      }
+      // let subsample = connectedPeers.concat([]);
+      // if (subsample.length > 25) {
+      //   subsample = getSubsamples(subsample);
+      // }
+      const subsample = getSubsamples(connectedPeers);
+      // console.log(`subsample: ${JSON.stringify(subsample, null, 2)}`)
 
       const candidatePeers = [];
 
       // Loop through the known addresses
       for (let j = 0; j < subsample.length; j++) {
         // for (let j = 0; j < 2; j++) {
-        const thisAddr = connectedPeers[j];
+        const thisAddr = subsample[j];
 
         const nearbyPeers = [];
 
@@ -177,24 +175,39 @@ async function startScan() {
 
         const addrs = [];
         info.addrs.forEach((addr) => addrs.push(addr.toString()));
-        // console.log('addrs: ', addrs)
+        // console.log("addrs: ", addrs);
 
-        let wssFound = false;
+        let wsFound = false;
+
+        // try {
+        //   await ipfs.swarm.connect(``)
+        // }
 
         // Loop through each multiaddr string.
         for (let k = 0; k < addrs.length; k++) {
           const thisAddr = addrs[k];
 
-          if (thisAddr.indexOf("wss") > -1) {
-            knownValidAddrs.push(thisCandidate);
-            wssFound = true;
-            console.log(`WSS peer found: ${thisCandidate}`);
-            break;
+          if (thisAddr.indexOf("/ws") > -1) {
+            const obj = {
+              addr: thisAddr,
+              id: thisCandidate,
+            };
+
+            wsData.push(obj);
+
+            if (!wsFound) {
+              knownValidAddrs.push(thisCandidate);
+
+              console.log(`WS peer found: ${thisCandidate}`);
+              // break;
+            }
+
+            wsFound = true;
           }
         }
 
         // Add the candidate to the known-invalid array.
-        if (!wssFound) {
+        if (!wsFound) {
           knownInvalidAddrs.push(thisCandidate);
           // console.log(`Added ${thisCandidate} to knownInvalidAddrs list`);
         }
@@ -212,6 +225,7 @@ async function startScan() {
       // Write results to the JSON files.
       await jsonFiles.writeJSON(knownInvalidAddrs, invalidFilename);
       await jsonFiles.writeJSON(knownValidAddrs, validFilename);
+      await jsonFiles.writeJSON(wsData, "ws-peers.json");
       console.log(`Successfully wrote out new JSON files.\n`);
     } while (1);
   } catch (err) {
@@ -224,22 +238,27 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-
 // Given an array larger than 25 elements, it will return a 25 element array
 // whos elements are randomly chosen from the input array.
 function getSubsamples(inputArray) {
   try {
-    const newArray = []
+    // Combine all known peer IDs into a single array.
+    const newArray = inputArray.concat(knownInvalidAddrs, knownValidAddrs);
+    // console.log(`newArray: ${JSON.stringify(newArray, null, 2)}`)
+    // console.log(`newArray length: ${newArray.length}`);
 
-    for(let i=0; i < 25; i++) {
-      const randIndex = Math.round(Math.random*inputArray.length)
+    const outArray = [];
 
-      newArray.push(inputArray[randIndex])
+    for (let i = 0; i < 20; i++) {
+      const randIndex = Math.round(Math.random() * newArray.length);
+
+      outArray.push(newArray[randIndex]);
     }
+    // console.log(`outArray: ${JSON.stringify(outArray, null, 2)}`)
 
-    return newArray
-  } catch(err) {
-    console.error('Error in getSubsamples()')
-    throw err
+    return outArray;
+  } catch (err) {
+    console.error("Error in getSubsamples()");
+    throw err;
   }
 }
